@@ -843,7 +843,11 @@
   });
   function reactToStatus(id){
     if(!autoOn) return;
-    setTimeout(()=>goTo(id, pickZone(id)), 500);
+    setTimeout(()=>{
+      let z = pickZone(id), guard = 0;
+      while(z === agents[id].zone && guard++ < 5) z = pickZone(id);
+      goTo(id, z);
+    }, 500);
   }
 
   refreshHint();
