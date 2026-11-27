@@ -5,13 +5,18 @@
 <title>모바일 미리보기</title>
 <style>
   html,body{margin:0;background:#ddd;font:12px/1.4 sans-serif}
-  .row{display:flex;gap:16px;padding:16px;align-items:flex-start}
+  .row{display:flex;gap:20px;padding:16px;align-items:flex-start}
+  .box{position:relative;overflow:hidden}
+  .box .zoom{transform:scale(2);transform-origin:top left}
   iframe{border:0;background:#fff;box-shadow:0 6px 20px rgba(0,0,0,.25)}
 </style>
 </head>
 <body>
   <div class="row">
     <iframe src="index.html" style="width:390px;height:844px"></iframe>
+    <div class="box" style="width:700px;height:844px">
+      <iframe class="zoom" src="index.html" style="width:350px;height:422px"></iframe>
+    </div>
   </div>
 </body>
 </html>
