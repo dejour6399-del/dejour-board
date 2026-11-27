@@ -134,60 +134,79 @@
     background:#efe4d4;
   }
   .map-bg{width:100%;aspect-ratio:1008/1792;object-fit:cover;display:block}
-  .desk{
+  /* 캐릭터 — left/top 으로 자리를 옮기고, 걷는 동안 통통 튀는 모션 */
+  .agent{
     position:absolute;
-    left:var(--x);top:var(--y);
-    width:15cqi;
+    left:50%;top:50%;
+    width:var(--w,9.8cqi);
     transform:translate(-50%,-100%);
     padding:0;margin:0;
     display:flex;flex-direction:column;align-items:center;
+    transition:left 0ms linear, top 0ms linear, width .55s ease;
+    will-change:left,top;
+    z-index:10;
     -webkit-tap-highlight-color:transparent;
   }
-  .desk .char{
-    width:100%;
-    filter:drop-shadow(0 6px 6px rgba(60,38,20,.30));
-    animation:bob 4.6s ease-in-out infinite;
-    transition:transform .18s ease;
+  .agent .shadow{
+    position:absolute;left:50%;bottom:-1%;
+    width:74%;height:7%;
+    transform:translateX(-50%);
+    border-radius:50%;
+    background:radial-gradient(ellipse at 50% 50%, rgba(84,54,28,.26) 0%, rgba(84,54,28,.10) 48%, rgba(84,54,28,0) 74%);
+    pointer-events:none;
   }
-  .desk:nth-of-type(2) .char{animation-delay:-1.1s}
-  .desk:nth-of-type(3) .char{animation-delay:-2.2s}
-  .desk:nth-of-type(4) .char{animation-delay:-3.3s}
+  .agent .body{display:block;width:100%;position:relative;transition:transform .22s ease}
+  .agent .char{
+    width:100%;display:block;
+    filter:drop-shadow(0 5px 5px rgba(60,38,20,.28));
+    transform-origin:50% 92%;
+    animation:bob 4.6s ease-in-out infinite;
+  }
+  .agent.face-left .body{transform:scaleX(-1)}
   @keyframes bob{
     0%,100%{transform:translateY(0)}
     50%{transform:translateY(-4.5%)}
   }
-  .desk:active .char{transform:scale(.94)}
-  .desk .bubble{
-    position:relative;
-    margin-bottom:2px;
-    padding:.28em .7em .32em;
-    font-size:clamp(10px, calc(1.5cqi + 4px), 13.5px);
-    line-height:1.25;
-    color:var(--wood-dark);
-    background:rgba(255,253,247,.96);
-    border:1px solid rgba(160,120,84,.42);
+  .agent.walking .char{animation:walk .34s linear infinite}
+  @keyframes walk{
+    0%{transform:translateY(0) rotate(-2.4deg) scaleY(1)}
+    25%{transform:translateY(-9%) rotate(1.6deg) scaleY(1.03)}
+    50%{transform:translateY(0) rotate(2.4deg) scaleY(.98)}
+    75%{transform:translateY(-9%) rotate(-1.6deg) scaleY(1.03)}
+    100%{transform:translateY(0) rotate(-2.4deg) scaleY(1)}
+  }
+  .agent:active .char{transform:scale(.94)}
+  /* 움직일 때만 잠깐 스쳐 보이는 작은 상태 아이콘 (이름·글자 없음) */
+  .agent .state-ico{
+    position:absolute;left:50%;bottom:100%;
+    transform:translate(-50%,4px) scale(.85);
+    padding:.12em .3em;
+    font-size:clamp(8px, calc(1.5cqi + 2px), 13px);
+    line-height:1.1;
     border-radius:999px;
-    box-shadow:0 3px 8px rgba(90,60,35,.20);
-    white-space:nowrap;
-    display:flex;align-items:center;gap:.45em;
+    background:rgba(255,253,247,.82);
+    box-shadow:0 2px 6px rgba(90,60,35,.18);
+    opacity:0;
+    transition:opacity .3s ease, transform .3s ease;
+    pointer-events:none;
   }
-  .desk .bubble .dot{
-    width:.62em;height:.62em;border-radius:50%;
-    background:var(--sage);box-shadow:0 0 0 .12em rgba(143,164,133,.25);
-    flex:0 0 auto;
+  .agent.walking .state-ico{opacity:1;transform:translate(-50%,0) scale(1)}
+
+  /* 오피스 맵 조작 버튼 */
+  .map-ctl{display:flex;gap:7px;justify-content:center;flex-wrap:wrap;margin-top:12px}
+  .ctrl{
+    padding:8px 13px;border-radius:999px;font-size:12.5px;
+    background:#fff;border:1px solid var(--line);color:var(--ink-soft);
+    box-shadow:var(--shadow-sm);transition:.16s;
   }
-  .desk .bubble::after{
-    content:"";position:absolute;left:50%;bottom:-5px;
-    width:8px;height:8px;transform:translateX(-50%) rotate(45deg);
-    background:rgba(255,253,247,.96);
-    border-right:1px solid rgba(160,120,84,.42);
-    border-bottom:1px solid rgba(160,120,84,.42);
+  .ctrl[aria-pressed="true"]{background:var(--sage-soft);border-color:#c2d3b6;color:#4f6b43;font-weight:700}
+  .ctrl:active{transform:scale(.96)}
+  .map-legend{display:flex;justify-content:center;gap:6px;flex-wrap:wrap;margin-top:10px}
+  .map-legend .chip{
+    font-size:11px;color:var(--ink-soft);
+    background:rgba(255,255,255,.7);border:1px solid var(--line);
+    border-radius:999px;padding:3px 9px;
   }
-  .map-foot{
-    display:flex;justify-content:center;align-items:center;gap:10px;
-    margin-top:12px;font-size:12px;color:var(--ink-soft);
-  }
-  .map-foot .chip{background:#fff;border:1px solid var(--line);border-radius:999px;padding:4px 10px}
   .map-hint{text-align:center;font-size:12px;color:var(--ink-soft);margin:10px 0 0}
 
   /* status colors */
@@ -404,33 +423,40 @@
       <div class="map-frame">
         <div class="map" id="map">
           <img class="map-bg" src="assets/office-bg.jpg" alt="PICKLE OFFICE 미니어처 사무실 배경" decoding="async">
-          <!-- 책상 위 캐릭터 (좌표는 화면 비율) -->
-          <button class="desk" data-who="minimi"  style="--x:21%;--y:52.6%" aria-label="미니미 책상 열기">
-            <span class="bubble"><span class="dot" data-dot="minimi"></span>미니미</span>
-            <img class="char" src="assets/minimi.png" alt="미니미 캐릭터" decoding="async">
+          <!-- 움직이는 캐릭터 4명 (left/top 은 화면 비율, JS 가 자리를 옮김) -->
+          <button class="agent" data-who="minimi" style="left:22.3%;top:48.7%;--w:9.8cqi" aria-label="미니미 프로필 열기">
+            <span class="state-ico" aria-hidden="true">💻</span>
+            <span class="shadow" aria-hidden="true"></span>
+            <span class="body"><img class="char" src="assets/minimi.png" alt="미니미 캐릭터" decoding="async"></span>
           </button>
-          <button class="desk" data-who="suger"    style="--x:79.5%;--y:52.8%" aria-label="설탕이 책상 열기">
-            <span class="bubble"><span class="dot" data-dot="suger"></span>설탕이</span>
-            <img class="char" src="assets/suger.png" alt="설탕이 캐릭터" decoding="async">
+          <button class="agent" data-who="suger" style="left:80.5%;top:49.7%;--w:9.8cqi" aria-label="설탕이 프로필 열기">
+            <span class="state-ico" aria-hidden="true">💻</span>
+            <span class="shadow" aria-hidden="true"></span>
+            <span class="body"><img class="char" src="assets/suger.png" alt="설탕이 캐릭터" decoding="async"></span>
           </button>
-          <button class="desk" data-who="sogeumi"  style="--x:22.5%;--y:72.2%" aria-label="소금이 책상 열기">
-            <span class="bubble"><span class="dot" data-dot="sogeumi"></span>소금이</span>
-            <img class="char" src="assets/sogeumi.png" alt="소금이 캐릭터" decoding="async">
+          <button class="agent" data-who="sogeumi" style="left:19.8%;top:69.7%;--w:9.8cqi" aria-label="소금이 프로필 열기">
+            <span class="state-ico" aria-hidden="true">💻</span>
+            <span class="shadow" aria-hidden="true"></span>
+            <span class="body"><img class="char" src="assets/sogeumi.png" alt="소금이 캐릭터" decoding="async"></span>
           </button>
-          <button class="desk" data-who="hunihun"  style="--x:78.5%;--y:72.2%" aria-label="후니훈 책상 열기">
-            <span class="bubble"><span class="dot" data-dot="hunihun"></span>후니훈</span>
-            <img class="char" src="assets/hunihun.png" alt="후니훈 캐릭터" decoding="async">
+          <button class="agent" data-who="hunihun" style="left:76.5%;top:69.8%;--w:9.8cqi" aria-label="후니훈 프로필 열기">
+            <span class="state-ico" aria-hidden="true">💻</span>
+            <span class="shadow" aria-hidden="true"></span>
+            <span class="body"><img class="char" src="assets/hunihun.png" alt="후니훈 캐릭터" decoding="async"></span>
           </button>
         </div>
       </div>
-      <p class="map-hint">책상 위 캐릭터를 눌러 오늘 하는 일을 확인하세요</p>
-      <div class="map-foot">
-        <span class="chip">🪵 위층 좌 · 미니미</span>
-        <span class="chip">🌿 위층 우 · 설탕이</span>
+      <div class="map-ctl" role="group" aria-label="오피스 움직임 조작">
+        <button class="ctrl" id="autoBtn" aria-pressed="true">🚶 자동 이동 ON</button>
+        <button class="ctrl" id="gatherBtn">⚡ 전원 모이기</button>
+        <button class="ctrl" id="seatBtn">💺 제자리로</button>
       </div>
-      <div class="map-foot">
-        <span class="chip">🪴 아래층 좌 · 소금이</span>
-        <span class="chip">🧰 아래층 우 · 후니훈</span>
+      <p class="map-hint" id="mapHint">자동 이동 켜짐 · 7초마다 자리를 옮겨요</p>
+      <div class="map-legend">
+        <span class="chip">🪑 책상</span>
+        <span class="chip">🗣️ 회의 테이블</span>
+        <span class="chip">☕ 주방 라운지</span>
+        <span class="chip">💤 위층 휴게실</span>
       </div>
     </div>
   </section>
@@ -495,7 +521,7 @@
     <div class="note">
       <span>💡</span>
       <div>사용량 %는 자동으로 불러올 수 없어서 <b>여유 · 보통 · 소진</b>을 직접 골라 두는 방식입니다.
-      오피스 맵 이름표 옆 점 색도 함께 바뀝니다.</div>
+      오피스 맵에서 머무는 자리가 상태에 맞춰 바뀝니다.</div>
     </div>
     <div class="team-grid" id="teamGrid"></div>
   </section>
@@ -620,6 +646,190 @@
   }
   paintDots();
 
+  /* ────────── 오피스 맵 움직임 ────────── */
+  /* 구역별 자리 (맵 기준 left/top %) — 각자 책상·회의석·라운지·휴게실 */
+  const SPOTS = {
+    desk:   {minimi:[22.3,48.7], suger:[80.5,49.7], sogeumi:[19.8,69.7], hunihun:[76.5,69.8]},
+    meet:   {minimi:[36.5,48],   suger:[57.5,47],   sogeumi:[44,53],     hunihun:[51.5,53]},
+    lounge: {minimi:[26,91.5],   suger:[44,91.5],   sogeumi:[31.5,97],   hunihun:[38.5,97]},
+    rest:   {minimi:[24,31],     suger:[74,31],     sogeumi:[43,29.5],   hunihun:[55,29.5]}
+  };
+  const ZONE_ICO  = {desk:"💻", meet:"🗣️", lounge:"☕", rest:"💤"};
+  const ZONE_WORD = {desk:"업무 중", meet:"회의 중", lounge:"커피 한 잔", rest:"잠깐 휴식"};
+  /* 구역별 원근에 맞춘 캐릭터 폭(cqi) — 뒤쪽은 조금 작게, 앞쪽은 조금 크게 */
+  const ZONE_W = {desk:9.8, meet:9.4, lounge:10.6, rest:8.7};
+  /* 자리 → 통로 노드 */
+  const ANCHOR = {
+    desk:   {minimi:"m1", suger:"m2", sogeumi:"m3", hunihun:"m4"},
+    meet:   {minimi:"h5", suger:"h3", sogeumi:"h1", hunihun:"d1"},
+    lounge: {minimi:"k4", suger:"k4", sogeumi:"k3", hunihun:"k1"},
+    rest:   {minimi:"b1", suger:"b3", sogeumi:"bp", hunihun:"bp"}
+  };
+  /* 통로 노드 (벽·테이블을 피해 걷도록 이어 둔 길) */
+  const NODES = {
+    bp:[47,33],  h5:[47,37],   h4:[61,38],   h3:[61.5,46], h2:[61,54.5], h1:[47,55.5],
+    d1:[36,53],  d3:[36,70.5], d4:[60,70.5], l1:[47,66],   l2:[47,73],
+    k1:[49.5,79], k2:[49.5,92], k3:[46.5,96.5], k4:[24,96.5],
+    b1:[25,32.5], b3:[74,32.5],
+    m1:[22,53.2], m2:[80,53.5], m3:[20,73], m4:[76,73]
+  };
+  const EDGES = [
+    ["bp","b1"],["bp","b3"],["bp","h5"],["h5","h4"],["h4","h3"],["h3","h2"],["h2","h1"],
+    ["h1","d1"],["h1","l1"],["l1","d3"],["l1","d4"],["l1","l2"],
+    ["l2","k1"],["k1","k2"],["k2","k3"],["k3","k4"],
+    ["m1","d1"],["m2","h2"],["m3","d3"],["m4","d4"]
+  ];
+  const ADJ = {};
+  EDGES.forEach(([a,b])=>{ (ADJ[a]=ADJ[a]||[]).push(b); (ADJ[b]=ADJ[b]||[]).push(a); });
+
+  function nodePath(from,to){
+    if(from === to) return [from];
+    const prev = {}; prev[from] = null;
+    const q = [from];
+    while(q.length){
+      const c = q.shift();
+      if(c === to) break;
+      (ADJ[c]||[]).forEach(n=>{ if(!(n in prev)){ prev[n] = c; q.push(n); } });
+    }
+    if(!(to in prev)) return [from,to];
+    const out = []; let c = to;
+    while(c !== null){ out.unshift(c); c = prev[c]; }
+    return out;
+  }
+
+  const agents = {};
+  document.querySelectorAll(".agent").forEach(el=>{
+    const id = el.dataset.who;
+    agents[id] = {el, id, zone:"desk", pos:SPOTS.desk[id].slice(), tok:0, walking:false,
+                  ico:el.querySelector(".state-ico")};
+    el.style.zIndex = Math.round(SPOTS.desk[id][1] * 10);
+    el.style.setProperty("--w", ZONE_W.desk + "cqi");
+  });
+
+  const sleep = ms => new Promise(r=>setTimeout(r,ms));
+  function place(a, p, dur){
+    a.el.style.transitionDuration = dur + "ms";
+    a.el.style.left = p[0] + "%";
+    a.el.style.top  = p[1] + "%";
+    a.el.style.zIndex = Math.round(p[1] * 10);
+  }
+  function say(a, zone){
+    a.ico.textContent = ZONE_ICO[zone] || ZONE_ICO.desk;
+  }
+  function routeFor(a, toZone){
+    const from = a.pos;
+    const start = ANCHOR[a.zone] ? ANCHOR[a.zone][a.id] : "h1";
+    const end = ANCHOR[toZone][a.id];
+    const pts = [[from[0], from[1]]];
+    const chain = nodePath(start, end);
+    chain.forEach(n=>{
+      const last = pts[pts.length-1];
+      if(Math.hypot(NODES[n][0]-last[0], NODES[n][1]-last[1]) > .4) pts.push(NODES[n].slice());
+    });
+    const t = SPOTS[toZone][a.id];
+    const last = pts[pts.length-1];
+    if(Math.hypot(t[0]-last[0], t[1]-last[1]) > .4) pts.push([t[0], t[1]]);
+    return pts;
+  }
+  async function goTo(id, zone){
+    const a = agents[id];
+    if(!a || a.zone === zone) return;
+    const pts = routeFor(a, zone);
+    const tok = ++a.tok;
+    a.zone = zone;
+    a.walking = true;
+    a.el.classList.add("walking");
+    a.el.style.setProperty("--w", ZONE_W[zone] + "cqi");
+    say(a, zone);
+    a.el.setAttribute("aria-label", TEAM[id].name + " · " + ZONE_WORD[zone] + " · 프로필 열기");
+    for(let i=1;i<pts.length;i++){
+      const f = pts[i-1], t = pts[i];
+      const dist = Math.hypot(t[0]-f[0], (t[1]-f[1]) * 1.6);
+      const dur = Math.max(190, Math.min(1050, Math.round(dist * 30)));
+      if(t[0] < f[0] - .8) a.el.classList.add("face-left");
+      else if(t[0] > f[0] + .8) a.el.classList.remove("face-left");
+      place(a, t, dur);
+      await sleep(dur + 30);
+      if(tok !== a.tok) return;
+      a.pos = [t[0], t[1]];
+    }
+    a.walking = false;
+    a.el.classList.remove("walking");
+  }
+
+  /* 상태별 선호 구역 — 보통은 책상, 여유는 회의·라운지, 소진은 휴게실·주방 */
+  const PREF = {
+    free:{desk:2, meet:4, lounge:4, rest:1},
+    mid: {desk:5, meet:2, lounge:2, rest:1},
+    out: {desk:1, meet:1, lounge:3, rest:5}
+  };
+  function pickZone(id){
+    const w = PREF[statusMap[id]] || PREF.mid;
+    const keys = Object.keys(w);
+    let total = keys.reduce((s,k)=>s+w[k], 0), r = Math.random() * total;
+    for(const k of keys){ r -= w[k]; if(r <= 0) return k; }
+    return "desk";
+  }
+
+  const ROAM_MS = 7000, GATHER_REST_MS = 14000;
+  let autoOn = true, quietUntil = 0;
+  const autoBtn = document.getElementById("autoBtn");
+  const mapHint = document.getElementById("mapHint");
+
+  function refreshHint(){
+    if(!autoOn){ mapHint.textContent = "자동 이동 꺼짐 · 버튼으로 하나씩 불러 보세요"; return; }
+    const left = Math.ceil((quietUntil - Date.now())/1000);
+    mapHint.textContent = left > 0
+      ? "잠시 한자리에 모았어요 · " + left + "초 뒤 자동 이동 재개"
+      : "자동 이동 켜짐 · 7초마다 자리를 옮겨요";
+  }
+
+  function roamTick(){
+    if(!autoOn) return;
+    if(document.getElementById("tab-office").hidden) return;
+    if(Date.now() < quietUntil) return;
+    const idle = ORDER.filter(id => agents[id] && !agents[id].walking);
+    if(!idle.length) return;
+    const n = (idle.length > 1 && Math.random() < .4) ? 2 : 1;
+    idle.sort(()=>Math.random()-.5).slice(0, n).forEach((id, i)=>{
+      let z = pickZone(id), guard = 0;
+      while(z === agents[id].zone && guard++ < 5) z = pickZone(id);
+      setTimeout(()=>goTo(id, z), i * 450);
+    });
+  }
+
+  autoBtn.addEventListener("click", ()=>{
+    autoOn = !autoOn;
+    autoBtn.setAttribute("aria-pressed", autoOn);
+    autoBtn.textContent = autoOn ? "🚶 자동 이동 ON" : "🚶 자동 이동 OFF";
+    refreshHint();
+  });
+  document.getElementById("gatherBtn").addEventListener("click", ()=>{
+    quietUntil = Date.now() + GATHER_REST_MS;
+    ORDER.forEach((id,i)=>setTimeout(()=>goTo(id, "meet"), i * 200));
+    refreshHint();
+    setTimeout(refreshHint, 1000);
+  });
+  document.getElementById("seatBtn").addEventListener("click", ()=>{
+    quietUntil = Date.now() + GATHER_REST_MS;
+    ORDER.forEach((id,i)=>setTimeout(()=>goTo(id, "desk"), i * 200));
+    refreshHint();
+    setTimeout(refreshHint, 1000);
+  });
+  function reactToStatus(id){
+    if(!autoOn) return;
+    setTimeout(()=>{
+      let z = pickZone(id), guard = 0;
+      while(z === agents[id].zone && guard++ < 5) z = pickZone(id);
+      goTo(id, z);
+    }, 500);
+  }
+
+  refreshHint();
+  setInterval(refreshHint, 1000);
+  setInterval(roamTick, ROAM_MS);
+  setTimeout(roamTick, 4200);
+
   /* 팀 카드 */
   const grid = document.getElementById("teamGrid");
   ORDER.forEach(id=>{
@@ -653,6 +863,7 @@
     write(LS.status, statusMap);
     row.querySelectorAll(".seg").forEach(s=>s.setAttribute("aria-pressed", s.dataset.set === btn.dataset.set));
     paintDots();
+    reactToStatus(id);
   });
 
   /* ────────── 모달 ────────── */
@@ -677,7 +888,7 @@
     back.classList.remove("on");
     setTimeout(()=>{ back.hidden = true; }, 180);
   }
-  document.querySelectorAll(".desk").forEach(d=>d.addEventListener("click",()=>openModal(d.dataset.who)));
+  document.querySelectorAll(".agent").forEach(d=>d.addEventListener("click",()=>openModal(d.dataset.who)));
   document.getElementById("modalClose").addEventListener("click", closeModal);
   back.addEventListener("click", e=>{ if(e.target === back) closeModal(); });
   document.addEventListener("keydown", e=>{ if(e.key === "Escape" && !back.hidden) closeModal(); });
