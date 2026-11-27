@@ -678,16 +678,16 @@
   /* 구역별 자리 (맵 기준 left/top %) — 각자 책상·회의석·라운지·휴게실 */
   const SPOTS = {
     desk:   {minimi:[21,52.6],   suger:[79.5,52.8], sogeumi:[22.5,72.2], hunihun:[78.5,72.2]},
-    meet:   {minimi:[41.5,41.5], suger:[54,41],     sogeumi:[43,52.5],   hunihun:[53,52.5]},
-    lounge: {minimi:[21,93],     suger:[34,97],     sogeumi:[44.5,91],   hunihun:[50.5,86]},
+    meet:   {minimi:[47.5,36.5], suger:[60,47],     sogeumi:[47.5,57.5], hunihun:[36,47]},
+    lounge: {minimi:[18,93],     suger:[30,97.5],   sogeumi:[45,90],     hunihun:[49.5,79.5]},
     rest:   {minimi:[25,32.5],   suger:[74,32.5],   sogeumi:[44,30.5],   hunihun:[54,30.5]}
   };
   const ZONE_SAY = {desk:"업무 중 💻", meet:"회의 중 🗣️", lounge:"커피 한 잔 ☕", rest:"잠깐 휴식 💤"};
   /* 자리 → 통로 노드 */
   const ANCHOR = {
     desk:   {minimi:"d1", suger:"h2", sogeumi:"d3", hunihun:"d4"},
-    meet:   {minimi:"h5", suger:"h4", sogeumi:"h1", hunihun:"h1"},
-    lounge: {minimi:"k4", suger:"k4", sogeumi:"k3", hunihun:"k2"},
+    meet:   {minimi:"h5", suger:"h3", sogeumi:"h1", hunihun:"d1"},
+    lounge: {minimi:"k4", suger:"k4", sogeumi:"k3", hunihun:"k1"},
     rest:   {minimi:"b1", suger:"b3", sogeumi:"bp", hunihun:"bp"}
   };
   /* 통로 노드 (벽·테이블을 피해 걷도록 이어 둔 길) */
