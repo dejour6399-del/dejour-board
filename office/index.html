@@ -290,6 +290,43 @@
   }
   .note b{color:#7a5535}
 
+  /* ── 노션 중계 연결 ── */
+  .relay{
+    display:flex;gap:8px;align-items:center;flex-wrap:wrap;
+    margin:0 0 12px;padding:10px 12px;border-radius:13px;
+    background:rgba(255,255,255,.6);border:1px solid var(--line);
+  }
+  .relay .badge{
+    display:inline-flex;align-items:center;gap:6px;flex:0 0 auto;
+    font-size:11.5px;font-weight:700;color:#8a7466;
+    background:#f3ece2;border-radius:999px;padding:3px 10px;
+  }
+  .relay .badge .b-dot{width:7px;height:7px;border-radius:50%;background:#b9a695;flex:0 0 auto}
+  .relay[data-state="online"] .badge{background:var(--sage-soft);color:#4f6b43}
+  .relay[data-state="online"] .badge .b-dot{background:var(--sage)}
+  .relay[data-state="loading"] .badge{background:#fdf0dc;color:#a9772a}
+  .relay[data-state="loading"] .badge .b-dot{background:var(--amber)}
+  .relay[data-state="offline"] .badge{background:#fbe4e1;color:#b8574e}
+  .relay[data-state="offline"] .badge .b-dot{background:#d2685f}
+  .relay input[type=url]{
+    flex:1 1 200px;min-width:0;
+    padding:8px 12px;border-radius:11px;border:1px solid var(--line);
+    background:#fff;color:var(--ink);font:inherit;font-size:12.5px;
+  }
+  .relay input[type=url]:focus{outline:2px solid #f2c3d2;outline-offset:1px}
+  .relay .mini{
+    padding:8px 12px;border-radius:11px;font-size:12.5px;
+    background:#fff;border:1px solid var(--line);color:var(--ink-soft);
+    box-shadow:var(--shadow-sm);
+  }
+  .relay .mini:active{transform:scale(.97)}
+  .relay .mini.primary{background:linear-gradient(180deg,#ec7ba1,#e0648f);color:#fff;border:0;font-weight:700}
+  .relay .stamp{flex:1 1 100%;font-size:11px;color:#b09a89;line-height:1.4;min-height:14px}
+  .task .title a{color:inherit;text-decoration:none;border-bottom:1px dotted #d3b39d}
+  .task .title a:hover{color:#a8395f}
+  .task .sum{font-size:11.5px;color:#a08a79;margin-top:4px;line-height:1.4;word-break:keep-all;overflow-wrap:anywhere}
+  .task .tag{font-size:10.5px;padding:1px 7px;border-radius:999px;background:var(--cream-2);color:#8a6d52}
+
   /* ── team ── */
   .team-grid{display:grid;grid-template-columns:1fr;gap:12px}
   @media(min-width:700px){.team-grid{grid-template-columns:1fr 1fr}}
@@ -469,11 +506,21 @@
         <span class="hint">지시를 카드로 세워 두고 대기 → 진행중 → 완료로 넘겨요</span>
       </div>
 
+      <div class="relay" id="relay" data-state="local">
+        <span class="badge"><span class="b-dot"></span><span id="relayBadgeText">로컬 저장</span></span>
+        <input type="url" id="relayUrl" inputmode="url" spellcheck="false"
+               placeholder="노션 중계 서버 주소 (예: https://dejour-office-relay.내계정.workers.dev)"
+               aria-label="노션 중계 서버 주소">
+        <button class="mini primary" id="relaySave" type="button">연결</button>
+        <button class="mini" id="relayRefresh" type="button" title="노션에서 새로 가져오기">↻ 새로고침</button>
+        <div class="stamp" id="relayStamp">중계 서버 주소를 넣으면 지휘실 카드가 노션 ‘📒 AI 업무 일지’와 함께 움직여요. 지금은 이 브라우저에만 저장돼요.</div>
+      </div>
+
       <div class="note">
         <span>📮</span>
         <div><b>노션 ‘📮 업무 지시’와 함께 쓰는 창구입니다.</b><br>
-        노션 <b>📒 AI 업무 일지 · 업무 지시</b> 보기에 같은 내용을 적으면 네 비서가 함께 확인합니다.
-        이 화면의 카드는 이 브라우저에만 저장돼요.</div>
+        중계 서버를 연결하면 여기서 만든 지시가 노션 <b>📒 AI 업무 일지</b>에 ‘대기’로 바로 들어가고, 상태를 바꾸면 노션도 함께 바뀝니다.<br>
+        주소를 비워 두면 예전처럼 이 브라우저에만 저장돼요.</div>
       </div>
 
       <div class="filter-row" id="filters" role="group" aria-label="담당 비서 필터">
@@ -624,6 +671,20 @@
   const read = (k, d) => { try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } };
   const write = (k, v) => { try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} };
 
+  /* ────────── 노션 중계 연결 ────────── */
+  const RELAY = {
+    url:"pickleOffice.relayUrl.v1",
+    cache:"pickleOffice.relayCache.v1"
+  };
+  const WHO_NAME = {minimi:"미니미", suger:"설탕이", sogeumi:"소금이", hunihun:"후니훈"};
+  const NAME_TO_WHO = {"미니미":"minimi", "설탕이":"suger", "소금이":"sogeumi", "후니훈":"hunihun"};
+  const COL_STATUS = {todo:"대기", doing:"진행중", done:"완료"};
+  const STATUS_TO_COL = {"수집":"todo", "대기":"todo", "진행중":"doing", "보류":"todo", "완료":"done", "실패":"done"};
+  let relayUrl = String(read(RELAY.url, "") || "").trim();
+  let relayState = "local";   // local | loading | online | offline
+  let relayCheckedAt = 0;
+  let relayBusy = false;
+
   /* ────────── 탭 ────────── */
   const tabs = [...document.querySelectorAll(".tab")];
   function selectTab(id){
@@ -633,6 +694,7 @@
       document.getElementById(t.getAttribute("aria-controls")).hidden = !on;
     });
     window.scrollTo({top:0,behavior:"smooth"});
+    if(id === "desk") setTimeout(maybeRelayOnDesk, 40);
   }
   tabs.forEach(t=>t.addEventListener("click",()=>selectTab(t.getAttribute("aria-controls").replace("tab-",""))));
 
@@ -901,8 +963,9 @@
     {id:"s4", title:"현장 사진 정리하고 블로그 초안", who:"hunihun", status:"doing", ts:Date.now()-86400000},
     {id:"s5", title:"업무 일지 이번 주 것 점검", who:"minimi", status:"done", ts:Date.now()-4*86400000}
   ];
-  let tasks = read(LS.tasks, null);
-  if(!Array.isArray(tasks) || !tasks.length) tasks = SEED.slice();
+  let localTasks = read(LS.tasks, null);
+  if(!Array.isArray(localTasks) || !localTasks.length) localTasks = SEED.slice();
+  let tasks = localTasks.slice();
   let filter = "all";
 
   const fmt = ts => {
@@ -932,30 +995,49 @@
   }
 
   function card(t){
-    const m = TEAM[t.who];
+    const m = TEAM[t.who] || TEAM.minimi;
     const el = document.createElement("div");
     el.className = "task";
-    const prev = t.status === "done" ? "todo" : (t.status === "doing" ? "todo" : "doing");
+    const prev = t.status === "done" ? "doing" : "todo";
+    const next = t.status === "todo" ? "doing" : "done";
+    const extra = t.notionStatus && t.notionStatus !== COL_STATUS[t.status]
+      ? `<span class="tag">${escapeHtml(t.notionStatus)}</span>` : "";
     el.innerHTML = `
-      <div class="title">${escapeHtml(t.title)}</div>
+      <div class="title">${t.url
+        ? `<a href="${escapeHtml(t.url)}" target="_blank" rel="noopener" title="노션에서 열기">${escapeHtml(t.title)}</a>`
+        : escapeHtml(t.title)}</div>
+      ${t.summary ? `<div class="sum">${escapeHtml(t.summary)}</div>` : ""}
       <div class="meta">
         <span class="who"><img src="${m.img}" alt="">${m.name}</span>
         <span class="date">${fmt(t.ts)}</span>
+        ${extra}
         <span class="acts">
           <button class="icon-btn" data-move="${prev}" title="이전 단계로">←</button>
-          <button class="icon-btn" data-move="${t.status==="todo"?"doing":t.status==="doing"?"done":"done"}" title="다음 단계로">→</button>
-          <button class="icon-btn" data-del="1" title="지우기">✕</button>
+          <button class="icon-btn" data-move="${next}" title="다음 단계로">→</button>
+          ${t.remote
+            ? `<button class="icon-btn" data-hold="1" title="노션에서 보류로">⏸</button>`
+            : `<button class="icon-btn" data-del="1" title="지우기">✕</button>`}
         </span>
       </div>`;
     el.querySelectorAll("[data-move]").forEach(b=>b.addEventListener("click", ev=>{
       ev.stopPropagation();
-      t.status = b.dataset.move;
-      write(LS.tasks, tasks); render();
+      const to = b.dataset.move;
+      if(to === t.status) return;
+      if(t.remote){ setRemoteStatus(t, COL_STATUS[to]); return; }
+      t.status = to;
+      localSave(); render();
     }));
-    el.querySelector("[data-del]").addEventListener("click", ev=>{
+    const hold = el.querySelector("[data-hold]");
+    if(hold) hold.addEventListener("click", ev=>{
       ev.stopPropagation();
+      setRemoteStatus(t, "보류");
+    });
+    const del = el.querySelector("[data-del]");
+    if(del) del.addEventListener("click", ev=>{
+      ev.stopPropagation();
+      localTasks = localTasks.filter(x=>x.id!==t.id);
       tasks = tasks.filter(x=>x.id!==t.id);
-      write(LS.tasks, tasks); render();
+      localSave(); render();
     });
     return el;
   }
@@ -963,6 +1045,171 @@
   function escapeHtml(s){
     return String(s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   }
+
+  function localSave(){ write(LS.tasks, localTasks); }
+
+  /* ────────── 노션 중계 서버 연결 ────────── */
+  const relayEl = document.getElementById("relay");
+  const relayUrlEl = document.getElementById("relayUrl");
+  const relayBadgeText = document.getElementById("relayBadgeText");
+  const relayStamp = document.getElementById("relayStamp");
+  relayUrlEl.value = relayUrl;
+
+  function setRelayState(state, message){
+    relayState = state;
+    relayEl.dataset.state = state;
+    relayBadgeText.textContent = state === "online" ? "노션 연결됨"
+      : state === "loading" ? "연결 확인 중"
+      : state === "offline" ? "연결 안 됨"
+      : "로컬 저장";
+    relayStamp.textContent = message || relayStamp.textContent;
+  }
+
+  function stampTime(ts){
+    const d = new Date(ts);
+    const p = n => (n < 10 ? "0" + n : "" + n);
+    return p(d.getHours()) + ":" + p(d.getMinutes());
+  }
+
+  function tidyUrl(v){
+    let s = String(v || "").trim();
+    if(!s) return "";
+    if(!/^https?:\/\//i.test(s)) s = "https://" + s;
+    return s.replace(/\/+$/, "");
+  }
+
+  async function relayCall(path, init){
+    if(!relayUrl) throw new Error("중계 서버 주소가 없습니다.");
+    const opts = Object.assign({ headers:{ "Content-Type":"application/json" } }, init || {});
+    const res = await fetch(relayUrl + path, opts);
+    let data = null;
+    try{ data = await res.json(); }catch(e){ data = null; }
+    if(!res.ok || !data || data.ok === false){
+      throw new Error((data && data.message) || ("중계 서버 응답 " + res.status));
+    }
+    return data;
+  }
+
+  function fromRemote(t){
+    const name = String(t.assignee || "").trim();
+    const st = String(t.status || "대기").trim();
+    return {
+      id: t.id,
+      remote: true,
+      title: t.title || "(제목 없음)",
+      who: NAME_TO_WHO[name] || "minimi",
+      status: STATUS_TO_COL[st] || "todo",
+      notionStatus: st,
+      summary: t.summary || "",
+      url: t.url || "",
+      ts: Date.parse(t.date) || Date.now()
+    };
+  }
+
+  async function loadRemote(note){
+    if(!relayUrl) return;
+    setRelayState("loading", "노션에서 목록을 불러오는 중…");
+    try{
+      const data = await relayCall("/tasks");
+      const list = (data.tasks || []).map(fromRemote);
+      tasks = list;
+      relayCheckedAt = Date.now();
+      write(RELAY.cache, {url: relayUrl, at: relayCheckedAt, tasks: data.tasks || []});
+      setRelayState("online", (note ? note + " · " : "") + "노션과 연결됐어요 · 마지막 확인 " + stampTime(relayCheckedAt) + " · " + list.length + "건");
+      render();
+    }catch(err){
+      relayCheckedAt = 0;
+      const cache = read(RELAY.cache, null);
+      if(cache && cache.url === relayUrl && Array.isArray(cache.tasks)){
+        tasks = cache.tasks.map(fromRemote);
+        setRelayState("offline", "연결이 끊겼어요(" + err.message + ") · " + stampTime(cache.at) + "에 받아 둔 목록을 보여 드려요");
+      }else{
+        tasks = localTasks.slice();
+        setRelayState("offline", "연결하지 못했어요(" + err.message + ") · 이 브라우저에 저장된 카드로 보여 드려요");
+      }
+      render();
+    }
+  }
+
+  function maybeRelayOnDesk(){
+    if(!relayUrl) return;
+    if(document.getElementById("tab-desk").hidden) return;
+    if(Date.now() - relayCheckedAt < 15000) return;
+    loadRemote();
+  }
+
+  async function setRemoteStatus(t, status){
+    if(relayBusy) return;
+    relayBusy = true;
+    const before = {status:t.status, notionStatus:t.notionStatus};
+    t.status = STATUS_TO_COL[status] || t.status;
+    t.notionStatus = status;
+    render();
+    try{
+      await relayCall("/tasks/" + encodeURIComponent(t.id), {
+        method:"PATCH",
+        body: JSON.stringify({status: status})
+      });
+      relayStamp.textContent = "노션에 '" + status + "'(으)로 저장했어요";
+      relayBusy = false;
+      loadRemote("노션에 '" + status + "'(으)로 저장했어요");
+      return;
+    }catch(err){
+      t.status = before.status;
+      t.notionStatus = before.notionStatus;
+      render();
+      relayStamp.textContent = "노션에 저장하지 못했어요 · " + err.message;
+    }
+    relayBusy = false;
+  }
+
+  async function addRemote(title, who){
+    const btn = document.querySelector("#addForm .btn-primary");
+    btn.disabled = true;
+    btn.style.opacity = ".6";
+    relayStamp.textContent = "노션에 저장하는 중…";
+    try{
+      await relayCall("/tasks", {
+        method:"POST",
+        body: JSON.stringify({ title: title, assignee: WHO_NAME[who], summary: "" })
+      });
+      document.getElementById("taskTitle").value = "";
+      relayStamp.textContent = "노션 📒 AI 업무 일지에 저장했어요";
+      await loadRemote("노션 📒 AI 업무 일지에 저장했어요");
+    }catch(err){
+      relayStamp.textContent = "노션에 저장하지 못했어요 · " + err.message;
+    }finally{
+      btn.disabled = false;
+      btn.style.opacity = "1";
+    }
+  }
+
+  document.getElementById("relaySave").addEventListener("click", ()=>{
+    const next = tidyUrl(relayUrlEl.value);
+    relayUrlEl.value = next;
+    if(next === relayUrl && relayState === "online"){ relayCheckedAt = 0; loadRemote(); return; }
+    relayUrl = next;
+    write(RELAY.url, relayUrl);
+    relayCheckedAt = 0;
+    if(!relayUrl){
+      tasks = localTasks.slice();
+      setRelayState("local", "중계 서버 주소를 넣으면 지휘실 카드가 노션과 함께 움직여요. 지금은 이 브라우저에만 저장돼요.");
+      render();
+      return;
+    }
+    loadRemote();
+  });
+
+  document.getElementById("relayRefresh").addEventListener("click", ()=>{
+    if(!relayUrl){
+      tasks = localTasks.slice();
+      render();
+      relayStamp.textContent = "중계 서버 주소를 먼저 넣어 주세요. 지금은 이 브라우저에만 저장돼요.";
+      return;
+    }
+    relayCheckedAt = 0;
+    loadRemote();
+  });
 
   document.getElementById("filters").addEventListener("click", e=>{
     const b = e.target.closest("[data-filter]"); if(!b) return;
@@ -976,14 +1223,33 @@
     const input = document.getElementById("taskTitle");
     const title = input.value.trim();
     if(!title) return;
-    tasks.push({id:"t"+Date.now(), title, who:document.getElementById("taskWho").value, status:"todo", ts:Date.now()});
-    write(LS.tasks, tasks);
+    const who = document.getElementById("taskWho").value;
+
+    if(relayState === "online"){ addRemote(title, who); return; }
+    if(relayState === "loading"){
+      relayStamp.textContent = "연결을 확인하는 중이에요 · 잠시 뒤 다시 눌러 주세요";
+      return;
+    }
+
+    const item = {id:"t"+Date.now(), title:title, who:who, status:"todo", ts:Date.now()};
+    localTasks.push(item);
+    tasks.push(item);
+    localSave();
     input.value = "";
     render();
+    relayStamp.textContent = relayUrl
+      ? "지금은 연결이 안 돼서 이 브라우저에만 저장했어요 · 연결되면 노션에 다시 넣어 주세요"
+      : "이 브라우저에만 저장했어요 · 중계 서버를 연결하면 노션으로 바로 들어가요";
   });
 
-  write(LS.tasks, tasks);
+  localSave();
   render();
+  if(relayUrl){
+    loadRemote();
+  }else{
+    setRelayState("local", "중계 서버 주소를 넣으면 지휘실 카드가 노션 ‘📒 AI 업무 일지’와 함께 움직여요. 지금은 이 브라우저에만 저장돼요.");
+  }
+  setInterval(maybeRelayOnDesk, 60000);
 
   /* ────────── 라운지 ────────── */
   const chat = document.getElementById("chat");

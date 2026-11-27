@@ -1,0 +1,13 @@
+name = "dejour-office-relay"
+main = "index.js"
+compatibility_date = "2024-11-01"
+
+# ── 비밀값은 이 파일에 적지 마세요 (저장소가 공개되어 있습니다) ──
+# 터미널로 배포할 때만 아래 명령으로 넣습니다.
+#   npx wrangler secret put NOTION_TOKEN
+#   npx wrangler secret put NOTION_DATABASE_ID
+# 대시보드로 배포하면 Settings > Variables and Secrets 에서 넣습니다.
+#
+# (선택) 오피스 페이지 주소만 허용하려면 아래 주석을 풀고 자기 주소로 바꿉니다.
+# [vars]
+# ALLOWED_ORIGIN = "https://dejour6399-del.github.io"
